@@ -464,7 +464,7 @@ export function GeneratorInterface() {
               </>
             )}
 
-            {tokenHistory && tokenHistory.length > 1 && (
+            {tokenHistory && tokenHistory.length > 0 && (
               <>
                 <Card className="p-4 sm:p-6 shadow-lg border-muted">
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -523,55 +523,84 @@ export function GeneratorInterface() {
                     <ArrowsLeftRight weight="fill" />
                     Compare Token Sets
                   </h3>
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="compare-set-a" className="text-sm">
-                        Token Set A
-                      </Label>
-                      <Select value={comparisonSetA} onValueChange={setComparisonSetA}>
-                        <SelectTrigger id="compare-set-a" className="mt-1">
-                          <SelectValue placeholder="Select first set" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tokenHistory.map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.tokens.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  {tokenHistory && tokenHistory.length >= 2 ? (
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="compare-set-a" className="text-sm">
+                          Token Set A
+                        </Label>
+                        <Select value={comparisonSetA} onValueChange={setComparisonSetA}>
+                          <SelectTrigger id="compare-set-a" className="mt-1">
+                            <SelectValue placeholder="Select first set" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {tokenHistory.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.tokens.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    <div>
-                      <Label htmlFor="compare-set-b" className="text-sm">
-                        Token Set B
-                      </Label>
-                      <Select value={comparisonSetB} onValueChange={setComparisonSetB}>
-                        <SelectTrigger id="compare-set-b" className="mt-1">
-                          <SelectValue placeholder="Select second set" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tokenHistory.map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.tokens.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                      <div>
+                        <Label htmlFor="compare-set-b" className="text-sm">
+                          Token Set B
+                        </Label>
+                        <Select value={comparisonSetB} onValueChange={setComparisonSetB}>
+                          <SelectTrigger id="compare-set-b" className="mt-1">
+                            <SelectValue placeholder="Select second set" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {tokenHistory.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.tokens.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    <Button
-                      onClick={handleCompare}
-                      disabled={!comparisonSetA || !comparisonSetB || comparisonSetA === comparisonSetB}
-                      className="w-full"
-                      variant="default"
-                    >
-                      <ArrowsLeftRight className="mr-2" weight="bold" />
-                      Compare Side-by-Side
-                    </Button>
-                  </div>
+                      <Button
+                        onClick={handleCompare}
+                        disabled={!comparisonSetA || !comparisonSetB || comparisonSetA === comparisonSetB}
+                        className="w-full"
+                        variant="default"
+                      >
+                        <ArrowsLeftRight className="mr-2" weight="bold" />
+                        Compare Side-by-Side
+                      </Button>
+                    </div>
+                  ) : (
+                    <Alert className="border-muted-foreground/20">
+                      <Info className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Generate at least <strong>2 design systems</strong> to unlock comparison mode. 
+                        {tokenHistory && tokenHistory.length === 1 && (
+                          <span className="block mt-1 text-accent font-medium">
+                            You have 1 - generate 1 more!
+                          </span>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </Card>
               </>
+            )}
+
+            {tokenHistory && tokenHistory.length === 0 && tokens && (
+              <Card className="p-4 sm:p-6 shadow-lg border-muted border-dashed">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <ArrowsLeftRight weight="fill" className="text-muted-foreground" />
+                  Compare Token Sets
+                </h3>
+                <Alert className="border-muted-foreground/20">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Generate <strong>one more design system</strong> to unlock comparison mode and see differences side-by-side.
+                  </AlertDescription>
+                </Alert>
+              </Card>
             )}
             </div>
 
