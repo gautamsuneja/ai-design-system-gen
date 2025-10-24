@@ -274,7 +274,7 @@ export function GeneratorInterface() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-4">
-            <Card className="p-4 sm:p-6 shadow-lg border-muted">
+              <Card className="p-4 sm:p-6 shadow-lg border-muted">
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="prompt" className="text-base font-medium">Design Brief</Label>
@@ -464,7 +464,7 @@ export function GeneratorInterface() {
               </>
             )}
 
-            {tokens && tokenHistory && tokenHistory.length > 1 && (
+            {tokenHistory && tokenHistory.length > 1 && (
               <>
                 <Card className="p-4 sm:p-6 shadow-lg border-muted">
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -573,9 +573,9 @@ export function GeneratorInterface() {
                 </Card>
               </>
             )}
-          </div>
+            </div>
 
-          <div className="lg:col-span-2">
+            <div className="lg:col-span-2">
             {error && (
               <Alert variant="destructive" className="mb-4 shadow-lg">
                 <Warning className="h-4 w-4" />
@@ -650,7 +650,7 @@ export function GeneratorInterface() {
               </Card>
             )}
           </div>
-        </div>
+          </div>
         </div>
       </div>
     </>
