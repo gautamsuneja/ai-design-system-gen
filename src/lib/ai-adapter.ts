@@ -129,6 +129,24 @@ export interface AIGenerateOptions {
   model?: string;
 }
 
+function cleanJsonResponse(response: string): string {
+  let cleaned = response.trim()
+  
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.slice(7)
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.slice(3)
+  }
+  
+  if (cleaned.endsWith('```')) {
+    cleaned = cleaned.slice(0, -3)
+  }
+  
+  cleaned = cleaned.trim()
+  
+  return cleaned
+}
+
 export async function generateTokensWithAI(
   options: AIGenerateOptions
 ): Promise<{ tokens: DesignTokens; rawOutput: string }> {
@@ -143,12 +161,15 @@ Remember: Return ONLY the JSON object, nothing else.`
   const response = await window.spark.llm(fullPrompt, model, true)
 
   try {
-    const tokens = JSON.parse(response) as DesignTokens
+    const cleanedResponse = cleanJsonResponse(response)
+    const tokens = JSON.parse(cleanedResponse) as DesignTokens
     return {
       tokens,
       rawOutput: response,
     }
   } catch (error) {
-    throw new Error(`Failed to parse AI response: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    console.error('Failed to parse AI response:', response)
+    console.error('Parse error:', error)
+    throw new Error(`Failed to parse AI response: ${error instanceof Error ? error.message : 'Unknown error'}. Please try generating again.`)
   }
 }
