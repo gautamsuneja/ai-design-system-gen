@@ -19,7 +19,8 @@ import {
   Info,
   ArrowsLeftRight,
   ClockCounterClockwise,
-  Trash
+  Trash,
+  ArrowsClockwise
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { generateTokensWithAI } from '@/lib/ai-adapter'
@@ -81,6 +82,7 @@ export function GeneratorInterface() {
   const [showComparison, setShowComparison] = useState(false)
   const [comparisonSetA, setComparisonSetA] = useState<string>('')
   const [comparisonSetB, setComparisonSetB] = useState<string>('')
+  const [lastPrompt, setLastPrompt] = useState<string>('')
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -95,6 +97,7 @@ export function GeneratorInterface() {
     try {
       const result = await generateTokensWithAI({ prompt })
       setTokens(result.tokens)
+      setLastPrompt(prompt.trim())
       
       const historyItem: TokenHistoryItem = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -106,6 +109,39 @@ export function GeneratorInterface() {
       setTokenHistory((current) => [historyItem, ...(current || [])].slice(0, 10))
       
       toast.success('Design tokens generated successfully!')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate tokens'
+      setError(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleRetry = async () => {
+    if (!lastPrompt) {
+      toast.error('No previous prompt to retry')
+      return
+    }
+
+    setIsGenerating(true)
+    setError(null)
+    setFigmaSuccess(null)
+
+    try {
+      const result = await generateTokensWithAI({ prompt: lastPrompt })
+      setTokens(result.tokens)
+      
+      const historyItem: TokenHistoryItem = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        tokens: result.tokens,
+        timestamp: Date.now(),
+        prompt: lastPrompt
+      }
+      
+      setTokenHistory((current) => [historyItem, ...(current || [])].slice(0, 10))
+      
+      toast.success('Tokens regenerated successfully!')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate tokens'
       setError(errorMessage)
@@ -327,6 +363,19 @@ export function GeneratorInterface() {
                     </>
                   )}
                 </Button>
+
+                {lastPrompt && !isGenerating && (
+                  <Button
+                    onClick={handleRetry}
+                    disabled={isGenerating}
+                    variant="outline"
+                    className="w-full relative overflow-hidden group"
+                    size="lg"
+                  >
+                    <ArrowsClockwise className="mr-2" weight="bold" />
+                    Retry Last Generation
+                  </Button>
+                )}
 
                 {isGenerating && (
                   <div className="space-y-2 text-xs text-muted-foreground">
