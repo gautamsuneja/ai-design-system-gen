@@ -280,5 +280,3 @@ style: format code with prettier
 ```
 
 ---
-
-Built with ❤️ using [Spark](https://github.com/features/spark)
