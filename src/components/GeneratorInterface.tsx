@@ -83,6 +83,7 @@ export function GeneratorInterface() {
   const [comparisonSetA, setComparisonSetA] = useState<string>('')
   const [comparisonSetB, setComparisonSetB] = useState<string>('')
   const [lastPrompt, setLastPrompt] = useState<string>('')
+  const [retryCount, setRetryCount] = useState<number>(0)
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -97,13 +98,18 @@ export function GeneratorInterface() {
     try {
       const result = await generateTokensWithAI({ prompt })
       setTokens(result.tokens)
-      setLastPrompt(prompt.trim())
+      const trimmedPrompt = prompt.trim()
+      
+      if (lastPrompt !== trimmedPrompt) {
+        setRetryCount(0)
+      }
+      setLastPrompt(trimmedPrompt)
       
       const historyItem: TokenHistoryItem = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         tokens: result.tokens,
         timestamp: Date.now(),
-        prompt: prompt.trim()
+        prompt: trimmedPrompt
       }
       
       setTokenHistory((current) => [historyItem, ...(current || [])].slice(0, 10))
@@ -131,6 +137,7 @@ export function GeneratorInterface() {
     try {
       const result = await generateTokensWithAI({ prompt: lastPrompt })
       setTokens(result.tokens)
+      setRetryCount(prev => prev + 1)
       
       const historyItem: TokenHistoryItem = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -141,7 +148,7 @@ export function GeneratorInterface() {
       
       setTokenHistory((current) => [historyItem, ...(current || [])].slice(0, 10))
       
-      toast.success('Tokens regenerated successfully!')
+      toast.success(`Tokens regenerated successfully! (Attempt ${retryCount + 1})`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate tokens'
       setError(errorMessage)
@@ -375,14 +382,29 @@ export function GeneratorInterface() {
                       title="Retry last generation to get different results"
                     >
                       <ArrowsClockwise className="" weight="bold" size={20} />
+                      {retryCount > 0 && (
+                        <Badge 
+                          variant="destructive" 
+                          className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs rounded-full"
+                        >
+                          {retryCount}
+                        </Badge>
+                      )}
                     </Button>
                   )}
                 </div>
 
                 {lastPrompt && !isGenerating && (
-                  <p className="text-xs text-center text-muted-foreground -mt-2">
-                    💡 Click <ArrowsClockwise className="inline" size={12} weight="bold" /> to retry "{lastPrompt.slice(0, 30)}{lastPrompt.length > 30 ? '...' : ''}"
-                  </p>
+                  <div className="text-xs text-center text-muted-foreground -mt-2 space-y-1">
+                    <p>
+                      💡 Click <ArrowsClockwise className="inline" size={12} weight="bold" /> to retry "{lastPrompt.slice(0, 30)}{lastPrompt.length > 30 ? '...' : ''}"
+                    </p>
+                    {retryCount > 0 && (
+                      <p className="text-accent font-medium">
+                        🔄 Regenerated {retryCount} {retryCount === 1 ? 'time' : 'times'} for this prompt
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {isGenerating && (
