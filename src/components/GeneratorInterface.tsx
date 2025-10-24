@@ -345,36 +345,44 @@ export function GeneratorInterface() {
                   </div>
                 </div>
 
-                <Button
-                  onClick={handleGenerate}
-                  disabled={isGenerating || !prompt.trim()}
-                  className="w-full relative overflow-hidden group"
-                  size="lg"
-                >
-                  {isGenerating ? (
-                    <>
-                      <CircleNotch className="mr-2 animate-spin" weight="bold" />
-                      Generating tokens...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkle className="mr-2" weight="fill" />
-                      Generate Tokens
-                    </>
-                  )}
-                </Button>
-
-                {lastPrompt && !isGenerating && (
+                <div className="flex gap-2">
                   <Button
-                    onClick={handleRetry}
-                    disabled={isGenerating}
-                    variant="outline"
-                    className="w-full relative overflow-hidden group"
+                    onClick={handleGenerate}
+                    disabled={isGenerating || !prompt.trim()}
+                    className="flex-1 relative overflow-hidden group"
                     size="lg"
                   >
-                    <ArrowsClockwise className="mr-2" weight="bold" />
-                    Retry Last Generation
+                    {isGenerating ? (
+                      <>
+                        <CircleNotch className="mr-2 animate-spin" weight="bold" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkle className="mr-2" weight="fill" />
+                        Generate
+                      </>
+                    )}
                   </Button>
+
+                  {lastPrompt && !isGenerating && (
+                    <Button
+                      onClick={handleRetry}
+                      disabled={isGenerating}
+                      variant="secondary"
+                      className="relative overflow-hidden group bg-accent hover:bg-accent/90"
+                      size="lg"
+                      title="Retry last generation to get different results"
+                    >
+                      <ArrowsClockwise className="" weight="bold" size={20} />
+                    </Button>
+                  )}
+                </div>
+
+                {lastPrompt && !isGenerating && (
+                  <p className="text-xs text-center text-muted-foreground -mt-2">
+                    💡 Click <ArrowsClockwise className="inline" size={12} weight="bold" /> to retry "{lastPrompt.slice(0, 30)}{lastPrompt.length > 30 ? '...' : ''}"
+                  </p>
                 )}
 
                 {isGenerating && (
