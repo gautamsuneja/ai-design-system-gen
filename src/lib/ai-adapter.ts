@@ -2,7 +2,12 @@ import type { DesignTokens } from '@/types/design-tokens'
 
 const SYSTEM_PROMPT = `You are a design system expert. Generate a complete design token system based on the user's prompt.
 
-CRITICAL: Respond ONLY with valid JSON. Do not include markdown code blocks, explanations, or any text outside the JSON object.
+CRITICAL REQUIREMENTS:
+1. Respond ONLY with valid, well-formed JSON
+2. All strings must be properly closed with matching quotes
+3. All braces and brackets must be properly balanced
+4. Do not include markdown code blocks, explanations, or any text outside the JSON object
+5. Ensure the entire JSON object is complete and valid
 
 Required schema:
 {
@@ -144,32 +149,110 @@ function cleanJsonResponse(response: string): string {
   
   cleaned = cleaned.trim()
   
+  const jsonStart = cleaned.indexOf('{')
+  const jsonEnd = cleaned.lastIndexOf('}')
+  
+  if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+    cleaned = cleaned.substring(jsonStart, jsonEnd + 1)
+  }
+  
   return cleaned
 }
 
+function validateJsonStructure(json: string): boolean {
+  let braceCount = 0
+  let bracketCount = 0
+  let inString = false
+  let escapeNext = false
+  
+  for (let i = 0; i < json.length; i++) {
+    const char = json[i]
+    
+    if (escapeNext) {
+      escapeNext = false
+      continue
+    }
+    
+    if (char === '\\') {
+      escapeNext = true
+      continue
+    }
+    
+    if (char === '"' && !escapeNext) {
+      inString = !inString
+      continue
+    }
+    
+    if (!inString) {
+      if (char === '{') braceCount++
+      if (char === '}') braceCount--
+      if (char === '[') bracketCount++
+      if (char === ']') bracketCount--
+    }
+  }
+  
+  return braceCount === 0 && bracketCount === 0 && !inString
+}
+
 export async function generateTokensWithAI(
-  options: AIGenerateOptions
+  options: AIGenerateOptions,
+  retryCount = 0
 ): Promise<{ tokens: DesignTokens; rawOutput: string }> {
   const { prompt, model = 'gpt-4o' } = options
+  const maxRetries = 2
 
   const fullPrompt = `${SYSTEM_PROMPT}
 
 User prompt: ${prompt}
 
-Remember: Return ONLY the JSON object, nothing else.`
-
-  const response = await window.spark.llm(fullPrompt, model, true)
+Remember: Return ONLY the complete, valid JSON object with all strings properly terminated.`
 
   try {
-    const cleanedResponse = cleanJsonResponse(response)
-    const tokens = JSON.parse(cleanedResponse) as DesignTokens
-    return {
-      tokens,
-      rawOutput: response,
+    const response = await window.spark.llm(fullPrompt, model, true)
+
+    try {
+      const cleanedResponse = cleanJsonResponse(response)
+      
+      if (!validateJsonStructure(cleanedResponse)) {
+        throw new Error('INVALID_JSON_STRUCTURE')
+      }
+      
+      const tokens = JSON.parse(cleanedResponse) as DesignTokens
+      
+      if (!tokens.name || !tokens.colors || !tokens.typography || !tokens.spacing) {
+        throw new Error('Invalid token structure: missing required fields')
+      }
+      
+      return {
+        tokens,
+        rawOutput: response,
+      }
+    } catch (parseError) {
+      console.error('Failed to parse AI response (attempt ' + (retryCount + 1) + '):', response.substring(0, 500))
+      console.error('Parse error:', parseError)
+      
+      if (retryCount < maxRetries) {
+        console.log('Retrying AI generation...')
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        return generateTokensWithAI(options, retryCount + 1)
+      }
+      
+      if (parseError instanceof Error && parseError.message.includes('INVALID_JSON_STRUCTURE')) {
+        throw new Error('The AI response contained malformed JSON with unterminated strings or mismatched braces. Automatic retry failed. Please try generating again.')
+      }
+      
+      if (parseError instanceof Error && parseError.message.includes('unterminated string')) {
+        throw new Error('The AI response contained malformed JSON with unterminated strings. Automatic retry failed. Please try generating again.')
+      }
+      
+      throw new Error(`Failed to parse AI response after ${maxRetries + 1} attempts: ${parseError instanceof Error ? parseError.message : 'Unknown error'}. Please try generating again.`)
     }
   } catch (error) {
-    console.error('Failed to parse AI response:', response)
-    console.error('Parse error:', error)
-    throw new Error(`Failed to parse AI response: ${error instanceof Error ? error.message : 'Unknown error'}. Please try generating again.`)
+    if (error instanceof Error && error.message.includes('Failed to parse AI response')) {
+      throw error
+    }
+    
+    console.error('AI generation error:', error)
+    throw new Error(`Failed to generate tokens: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }

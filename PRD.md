@@ -57,7 +57,8 @@ This is a focused tool with AI generation, token preview, and export capabilitie
 ## Edge Case Handling
 
 - **Invalid AI Response**: Show clear error message, allow retry with same prompt
-- **Malformed Token JSON**: Display validation errors with specific field issues
+- **Malformed Token JSON**: Automatically validate JSON structure and retry up to 2 times before showing error
+- **Unterminated JSON Strings**: Detect malformed JSON with unterminated strings, extract valid JSON boundaries, auto-retry with improved prompt
 - **Missing Figma Token**: Disable Figma push, show instructional tooltip
 - **Figma API Failure**: Catch errors, display user-friendly message with troubleshooting steps
 - **Network Timeout**: Show loading state with timeout warning after 30s
