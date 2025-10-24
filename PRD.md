@@ -47,6 +47,13 @@ This is a focused tool with AI generation, token preview, and export capabilitie
 - **Progression**: Click export → CSS file generated → Download starts
 - **Success criteria**: Valid CSS file with properly formatted custom properties
 
+### 6. Token History & Comparison
+- **Functionality**: Track recently generated token sets and compare any two side-by-side
+- **Purpose**: Enable designers to iterate and understand changes between design system variations
+- **Trigger**: Automatically saves on generation; user selects two sets and clicks "Compare Side-by-Side"
+- **Progression**: Generate tokens → Auto-saved to history (max 10) → Select two sets from dropdowns → Click compare → Full-screen comparison view with highlighted differences
+- **Success criteria**: History persists between sessions; comparison view clearly highlights all differences across colors, typography, spacing, effects, and components
+
 ## Edge Case Handling
 
 - **Invalid AI Response**: Show clear error message, allow retry with same prompt
@@ -55,6 +62,9 @@ This is a focused tool with AI generation, token preview, and export capabilitie
 - **Figma API Failure**: Catch errors, display user-friendly message with troubleshooting steps
 - **Network Timeout**: Show loading state with timeout warning after 30s
 - **Empty Prompt**: Disable generate button, show helper text with example prompts
+- **Selecting Same Sets for Comparison**: Disable compare button, show validation message
+- **Comparing with Only One Token Set**: Hide comparison UI until at least 2 sets exist
+- **History Limit Reached**: Remove oldest entry when adding 11th token set
 
 ## Design Direction
 
@@ -106,13 +116,17 @@ Animations should be minimal and purposeful, reinforcing the technical nature. F
   - Alert (error messages, privacy notices)
   - Separator (section dividers)
   - Tabs (organize preview sections)
-  - Badge (token labels)
+  - Badge (token labels, difference indicators)
   - Tooltip (help text for Figma integration)
   - Skeleton (loading states)
+  - Select (dropdown for choosing comparison sets)
+  - ScrollArea (scrollable comparison view)
 - **Customizations**: 
   - Code preview component (syntax highlighted JSON)
   - Color swatch grid (custom display for color tokens)
   - Spacing scale visualizer (custom ruler component)
+  - Comparison view overlay (full-screen side-by-side display)
+  - Difference highlighting (accent background for changed values)
 - **States**: 
   - Buttons show subtle scale on hover (0.98), pressed state (0.96)
   - Inputs highlight with accent border on focus
@@ -124,6 +138,10 @@ Animations should be minimal and purposeful, reinforcing the technical nature. F
   - FigmaLogo (Figma push)
   - Check (success)
   - Warning (errors)
+  - ArrowsLeftRight (comparison feature)
+  - ClockCounterClockwise (history)
+  - Trash (delete history items)
+  - X (close comparison view)
 - **Spacing**: 
   - Use 4px base unit: 8px (compact), 16px (comfortable), 24px (section), 32px (page margins)
 - **Mobile**: 

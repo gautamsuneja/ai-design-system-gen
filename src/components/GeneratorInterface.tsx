@@ -16,7 +16,10 @@ import {
   Copy, 
   CircleNotch,
   LockKey,
-  Info
+  Info,
+  ArrowsLeftRight,
+  ClockCounterClockwise,
+  Trash
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { generateTokensWithAI } from '@/lib/ai-adapter'
@@ -24,6 +27,7 @@ import { tokensToJSON, tokensToCSS, downloadFile } from '@/lib/token-parser'
 import { pushToFigma, getFigmaInstructions, validateFigmaToken } from '@/lib/figma-adapter'
 import type { DesignTokens } from '@/types/design-tokens'
 import { TokenPreview } from '@/components/TokenPreview'
+import { ComparisonView } from '@/components/ComparisonView'
 import { useKV } from '@github/spark/hooks'
 import {
   Dialog,
@@ -38,6 +42,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const EXAMPLE_PROMPTS = [
   { label: '🏦 Modern Fintech Dashboard', prompt: 'Create a modern fintech dashboard design system with professional blue tones, high contrast for data visualization, and accessible color palette' },
@@ -45,6 +56,13 @@ const EXAMPLE_PROMPTS = [
   { label: '🎯 Minimalist Productivity App', prompt: 'Minimalist productivity app design system with calming colors, generous spacing, and clean typography focused on readability' },
   { label: '🔥 Bold Social Media', prompt: 'Bold and vibrant social media app with energetic colors, playful gradients, and modern typography for Gen Z audience' },
 ]
+
+interface TokenHistoryItem {
+  id: string
+  tokens: DesignTokens
+  timestamp: number
+  prompt: string
+}
 
 export function GeneratorInterface() {
   const [prompt, setPrompt] = useState('')
@@ -59,6 +77,11 @@ export function GeneratorInterface() {
   const [isPushingToFigma, setIsPushingToFigma] = useState(false)
   const [figmaSuccess, setFigmaSuccess] = useState<string | null>(null)
 
+  const [tokenHistory, setTokenHistory] = useKV<TokenHistoryItem[]>('token-history', [])
+  const [showComparison, setShowComparison] = useState(false)
+  const [comparisonSetA, setComparisonSetA] = useState<string>('')
+  const [comparisonSetB, setComparisonSetB] = useState<string>('')
+
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       toast.error('Please enter a prompt')
@@ -72,6 +95,16 @@ export function GeneratorInterface() {
     try {
       const result = await generateTokensWithAI({ prompt })
       setTokens(result.tokens)
+      
+      const historyItem: TokenHistoryItem = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        tokens: result.tokens,
+        timestamp: Date.now(),
+        prompt: prompt.trim()
+      }
+      
+      setTokenHistory((current) => [historyItem, ...(current || [])].slice(0, 10))
+      
       toast.success('Design tokens generated successfully!')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate tokens'
@@ -165,20 +198,82 @@ export function GeneratorInterface() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="mb-8 sm:mb-12">
-          <h1 className="text-3xl sm:text-4xl font-semibold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            AI Design System Generator
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Transform natural language into production-ready design tokens powered by AI
-          </p>
-        </div>
+  const handleCompare = () => {
+    if (!comparisonSetA || !comparisonSetB) {
+      toast.error('Please select two token sets to compare')
+      return
+    }
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 space-y-4">
+    if (comparisonSetA === comparisonSetB) {
+      toast.error('Please select different token sets')
+      return
+    }
+
+    setShowComparison(true)
+  }
+
+  const handleLoadHistoryItem = (item: TokenHistoryItem) => {
+    setTokens(item.tokens)
+    setPrompt(item.prompt)
+    toast.success('Loaded token set from history')
+  }
+
+  const handleDeleteHistoryItem = (id: string) => {
+    setTokenHistory((current) => (current || []).filter(item => item.id !== id))
+    toast.success('Removed from history')
+  }
+
+  const handleClearHistory = () => {
+    setTokenHistory([])
+    toast.success('History cleared')
+  }
+
+  const getComparisonTokens = () => {
+    const setA = tokenHistory?.find(item => item.id === comparisonSetA)
+    const setB = tokenHistory?.find(item => item.id === comparisonSetB)
+    return { setA, setB }
+  }
+
+  const formatTimestamp = (timestamp: number) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString()
+  }
+
+  const { setA, setB } = getComparisonTokens()
+
+  return (
+    <>
+      {showComparison && setA && setB && (
+        <ComparisonView
+          tokenSetA={setA.tokens}
+          tokenSetB={setB.tokens}
+          onClose={() => setShowComparison(false)}
+        />
+      )}
+
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+          <div className="mb-8 sm:mb-12">
+            <h1 className="text-3xl sm:text-4xl font-semibold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              AI Design System Generator
+            </h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Transform natural language into production-ready design tokens powered by AI
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-4">
             <Card className="p-4 sm:p-6 shadow-lg border-muted">
               <div className="space-y-4">
                 <div>
@@ -368,6 +463,116 @@ export function GeneratorInterface() {
                 </Card>
               </>
             )}
+
+            {tokens && tokenHistory && tokenHistory.length > 1 && (
+              <>
+                <Card className="p-4 sm:p-6 shadow-lg border-muted">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2">
+                    <ClockCounterClockwise weight="fill" />
+                    Generation History
+                  </h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {tokenHistory.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-3 border rounded-lg hover:bg-muted/50 transition-colors group"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{item.tokens.name}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{item.prompt}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{formatTimestamp(item.timestamp)}</p>
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              onClick={() => handleLoadHistoryItem(item)}
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2"
+                            >
+                              <Check size={14} />
+                            </Button>
+                            <Button
+                              onClick={() => handleDeleteHistoryItem(item.id)}
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-destructive hover:text-destructive"
+                            >
+                              <Trash size={14} />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {tokenHistory.length > 0 && (
+                    <Button
+                      onClick={handleClearHistory}
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-3"
+                    >
+                      <Trash className="mr-2" size={14} />
+                      Clear History
+                    </Button>
+                  )}
+                </Card>
+
+                <Card className="p-4 sm:p-6 shadow-lg border-muted">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2">
+                    <ArrowsLeftRight weight="fill" />
+                    Compare Token Sets
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="compare-set-a" className="text-sm">
+                        Token Set A
+                      </Label>
+                      <Select value={comparisonSetA} onValueChange={setComparisonSetA}>
+                        <SelectTrigger id="compare-set-a" className="mt-1">
+                          <SelectValue placeholder="Select first set" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tokenHistory.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.tokens.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="compare-set-b" className="text-sm">
+                        Token Set B
+                      </Label>
+                      <Select value={comparisonSetB} onValueChange={setComparisonSetB}>
+                        <SelectTrigger id="compare-set-b" className="mt-1">
+                          <SelectValue placeholder="Select second set" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tokenHistory.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.tokens.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      onClick={handleCompare}
+                      disabled={!comparisonSetA || !comparisonSetB || comparisonSetA === comparisonSetB}
+                      className="w-full"
+                      variant="default"
+                    >
+                      <ArrowsLeftRight className="mr-2" weight="bold" />
+                      Compare Side-by-Side
+                    </Button>
+                  </div>
+                </Card>
+              </>
+            )}
           </div>
 
           <div className="lg:col-span-2">
@@ -446,7 +651,8 @@ export function GeneratorInterface() {
             )}
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
