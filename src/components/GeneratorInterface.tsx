@@ -29,7 +29,9 @@ import { pushToFigma, getFigmaInstructions, validateFigmaToken } from '@/lib/fig
 import type { DesignTokens } from '@/types/design-tokens'
 import { TokenPreview } from '@/components/TokenPreview'
 import { ComparisonView } from '@/components/ComparisonView'
+import { PresetSelector } from '@/components/PresetSelector'
 import { useKV } from '@github/spark/hooks'
+import type { DesignPreset } from '@/lib/design-presets'
 import {
   Dialog,
   DialogContent,
@@ -161,6 +163,21 @@ export function GeneratorInterface() {
   const handleExampleClick = (examplePrompt: string) => {
     setPrompt(examplePrompt)
     setError(null)
+  }
+
+  const handlePresetSelect = (preset: DesignPreset) => {
+    setTokens(preset.tokens)
+    setPrompt(`Using ${preset.name} template`)
+    
+    const historyItem: TokenHistoryItem = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      tokens: preset.tokens,
+      timestamp: Date.now(),
+      prompt: `${preset.name} (Template)`
+    }
+    
+    setTokenHistory((current) => [historyItem, ...(current || [])].slice(0, 10))
+    toast.success(`${preset.name} template loaded successfully!`)
   }
 
   const handleExportJSON = () => {
@@ -349,6 +366,9 @@ export function GeneratorInterface() {
                         {example.label}
                       </Button>
                     ))}
+                  </div>
+                  <div className="pt-2">
+                    <PresetSelector onSelectPreset={handlePresetSelect} />
                   </div>
                 </div>
 
